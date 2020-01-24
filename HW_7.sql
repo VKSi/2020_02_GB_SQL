@@ -23,6 +23,13 @@ INSERT INTO orders
 		SELECT user_id
 			FROM orders)
 	;
+    
+	-- Решение с использованием JOIN
+  SELECT DISTINCT(name)
+	FROM users
+    JOIN orders
+		ON users.id = orders.user_id
+	;
   
 -- 2. Выведите список товаров products и разделов catalogs, который соответствует товару.
 SELECT * FROM products;
@@ -99,4 +106,12 @@ SELECT (SELECT c.name
 			FROM cities AS c
 			WHERE c.label = f.destination) AS Прибытие
 FROM flights AS f;
+
+-- Решение с использованием JOIN
+SELECT city_dep.name AS 'Отправление', city_dest.name AS 'Прибытие'
+	FROM flights
+    JOIN cities AS city_dep
+		ON flights.departure = city_dep.label
+	JOIN cities AS city_dest
+		ON flights.destination = city_dest.label;
     
