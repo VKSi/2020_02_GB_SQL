@@ -87,34 +87,32 @@ SELECT * FROM target_types LIMIT 10;
 SELECT * FROM profiles LIMIT 10; 
 
 -- Для проверки корректности работы запроса, для начала выведем таблицу, по которой будет происходить суммирование    
-SELECT CONCAT(u.first_name, ' ', u.last_name, ', id = ', u.id) AS 'User', COUNT(*) AS 'Number of likes', p.birthday
-	FROM users u
-		JOIN likes l
-			ON u.id = l.target_id
-		JOIN profiles p
-			ON u.id = p.user_id
-		JOIN target_types tt
-			ON l.target_type_id = tt.id
-	WHERE tt.name = 'users'
-    GROUP BY u.id
+SELECT p.user_id AS 'User', COUNT(DISTINCT l.id) AS 'Number of likes', p.birthday
+	FROM profiles p
+        LEFT JOIN likes l
+		ON p.user_id = l.target_id
+			AND target_type_id = (SELECT id
+									FROM target_types
+									WHERE name = 'users'
+									LIMIT 1)
+    GROUP BY p.user_id
     ORDER BY p.birthday DESC
     LIMIT 10;
 
 -- Сумируем полученный результат
 SELECT SUM(num_of_likes) AS 'Total number of likes' FROM 
-  (SELECT COUNT(*) AS num_of_likes
-	FROM users u
-		JOIN likes l
-			ON u.id = l.target_id
-		JOIN profiles p
-			ON u.id = p.user_id
-		JOIN target_types tt
-			ON l.target_type_id = tt.id
-	WHERE tt.name = 'users'
-    GROUP BY u.id
+  (SELECT COUNT(DISTINCT l.id) AS num_of_likes
+	FROM profiles p
+        LEFT JOIN likes l
+		ON p.user_id = l.target_id
+			AND target_type_id = (SELECT id
+									FROM target_types
+									WHERE name = 'users'
+									LIMIT 1)
+    GROUP BY p.user_id
     ORDER BY p.birthday DESC
     LIMIT 10) AS nol;
-
+    
 -- 4. Определить кто больше поставил лайков (всего) - мужчины или женщины?
 SHOW TABLES FROM vk;
 SELECT * FROM likes LIMIT 10;
@@ -141,6 +139,16 @@ SELECT IF(
 			ON p.user_id = l.user_id
 		WHERE p.sex = 'f')
     ,'Male', 'Female') AS 'Who likes more';
+    
+-- Другой вариант
+SELECT profiles.sex AS SEX, 
+  COUNT(likes.id) AS total_likes
+  FROM likes
+    JOIN profiles
+      ON likes.user_id = profiles.user_id
+    GROUP BY profiles.sex
+    ORDER BY total_likes DESC
+    LIMIT 1;
  
 -- 5. Найти 10 пользователей, которые проявляют наименьшую активность в использовании 
 -- социальной сети.
