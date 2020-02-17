@@ -26,22 +26,32 @@ CREATE INDEX likes_user_id_target_id_idx ON likes(user_id, target_id);
 -- - отношение в процентах (общее количество пользователей в группе / всего пользователей в системе) * 100
 -- --------------------------------------------------------------------------------------------------------------------------------
 SELECT * FROM communities_users LIMIT 10;
-SELECT * FROM communities LIMIT 10;
+SELECT * FROM communities LIMIT 25;
 SELECT * FROM profiles LIMIT 10;
 SELECT * FROM users LIMIT 10;
 
+INSERT INTO communities (name) VALUE ('empty_group');
+
 SELECT DISTINCT c.name as Community_name,
-    FLOOR(COUNT(p.user_id) OVER() / MAX(c.id) OVER()) AS 'Total average number of users',
-    MIN(p.birthday) OVER w_communities AS 'The youngest',
-    MAX(p.birthday) OVER w_communities AS 'The oldest',
+    COUNT(cu.user_id) OVER() / (SELECT COUNT(*) FROM communities) AS 'Total average number of users',
+    FIRST_VALUE(p.birthday) OVER birthday_desc AS 'The youngest',
+    FIRST_VALUE(u.first_name) OVER birthday_desc AS "The youngest's name",
+    FIRST_VALUE(u.last_name) OVER birthday_desc AS "The youngest's surname",
+    FIRST_VALUE(p.birthday) OVER birthday_asc AS 'The oldest',
+    FIRST_VALUE(u.first_name) OVER birthday_asc AS "The oldest's name",
+    FIRST_VALUE(u.last_name) OVER birthday_asc AS "The oldest's surname",
     COUNT(p.user_id) OVER w_communities AS 'Number of users in the group',
-    COUNT(p.user_id) OVER() AS 'Total number of users',
-    FLOOR(COUNT(p.user_id) OVER w_communities / COUNT(p.user_id) OVER() * 100) AS '5%'
-	FROM communities_users cu
-		JOIN communities c
+    (SELECT COUNT(*) FROM profiles) AS 'Total number of users',
+    COUNT(p.user_id) OVER w_communities / (SELECT COUNT(*) FROM profiles) * 100 AS '%%'
+	FROM communities c 
+		LEFT JOIN communities_users cu
 			ON c.id = cu.community_id
-		JOIN profiles p
+		LEFT JOIN profiles p
 			ON p.user_id = cu.user_id
-            WINDOW w_communities AS (PARTITION BY cu.community_id) 
+		LEFT JOIN users u
+			ON u.id = cu.user_id
+		WINDOW w_communities AS (PARTITION BY c.id),
+				birthday_desc AS (PARTITION BY c.id ORDER BY p.birthday DESC),
+				birthday_asc AS (PARTITION BY c.id ORDER BY p.birthday)
 	;
 -- --------------------------------------------------------------------------------------------------------------------------------
